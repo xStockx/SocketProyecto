@@ -1,0 +1,287 @@
+ <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Courbe de tendance</title>
+<link href="layout.css" rel="stylesheet" type="text/css">
+<!--[if lte IE 8]><script language="javascript" type="text/javascript" src="../excanvas.min.js"></script><![endif]-->
+<script language="javascript" type="text/javascript" src="jquery.js"></script>
+<script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
+<script type="text/javascript">
+    //
+    //--------------------------------------Section paramétrage-----------------------------------------------------
+    //var wsUri = "ws://echo.websocket.org/";
+     var wsUri = "ws://192.168.99.75:80/";   
+    //Le port est par défaut 80 sinon changer dans la librairie le fichier WebSocket.h à la ligne 53: WebSocket(const char *urlPrefix = "/", int inPort = 80); 
+    //
+    //Identifiant de la carte Arduino.
+    var ident_board = 'UN01';//Cet identifiant doit être identique à celui mentionné dans le programme embarqué (fichier .ino).
+    //
+    var nom_ana_B1= 'Température instantanée PIN 02';
+    //
+     //Numéros de broches ou pins des entrées analogiques de chaque case du tableau des entrées analogiques.
+    var case_ana_B1 = '02';//NE PAS MODIFIER.
+    //
+    //Libellés des unités des informations affichées dans les cases du tableau des entrées analogiques.  
+    var unite_ana_B1= '&#176;C';
+    //
+    //Paramètre de la thermistance CTN
+    //La résistance de charge se trouve entre le 5V et la broche sélectionnée. La CTN étant entre la broche sélectionnée et le 0V (Masse).
+    var PIN_CTN = '02';//Broche (pin) analogique affectée à la CTN.
+    var R_charge_CTN='11500';//valeur de la résistance de charge du pont diviseur. 
+    var R_25= '9800';//valeur en ohms de la résistance CTN à 25 degré Celsius.
+    var coef_b='3435';//coefficient spécifique à la CTN en degré Kelvin.
+    //
+    //-------------------Fin du paramétrage----------------------------------
+    //
+    //
+    //----------Variables du programme Stantor (ne pas modifier)-------------------
+    var output;
+    var identifiant_rec='XXXX'; //identifiant dans la trame reçue du serveur.
+    var type_rec='XX';		//type d'information reçue du serveur.
+    var rang_rec='00';		//numéro de broche dans la trame reçue du serveur.
+    var value_rec='0000';	//valeur dans la trame reçue du serveur.
+    var valeur_PWM='000';	//Valeur PWM transmise au serveur.
+    var valeur_counter='000';	//Valeur compteur transmise au serveur.
+    //
+    //Date du serveur.
+    var DateYear;
+    var DateMonth;
+    var DateDay;
+    var DateHour;
+    var DateMinute;
+    var DateSecond;
+    //
+    var temperature;
+    temperature_trend =0;//variable pour la courbe de tendance.
+    //------------------------------------------------------------------------
+    //
+    //Fonctions de traitement des Websockets.
+    function init()
+    {
+	output = document.getElementById('output');
+	testWebSocket();
+    }
+    function testWebSocket()
+    {    
+	websocket = new WebSocket(wsUri);
+	websocket.onopen = function(evt) { onOpen() };
+	websocket.onclose = function(evt) { onClose() };
+	websocket.onmessage = function(evt) { onMessage(evt) };
+	websocket.onerror = function(evt) { onError(evt) };
+    }
+    function onOpen()
+    {
+	obj=document.getElementById('wstexte1');
+	obj.innerHTML='CONNECTE' ;
+    }
+    //
+    //Procédure de fermeture de la WebSocket.
+    function onClose()
+    {
+	obj=document.getElementById('wstexte1');
+	obj.innerHTML='DECONNECTE' ;
+	websocket.close();
+	websocket=null;
+    }
+    //Fonction de traitement des informations digitales (entrées ou sorties) reçues de la carte Arduino.
+    function onMessage(evt) { 
+	//Variables privées pour le calcul de la température.
+	var temperature;
+	var mesure;
+	var Ratio;
+	var R_ctn;
+	var rdt;
+	//
+	//Test pour Affichage du Ping/Pong.
+/*	
+	if ((evt.data=='ping') || (evt.data=='pong')){ 
+	    obj=document.getElementById('wstexte2');
+	    obj.innerHTML= evt.data;
+	    return;
+	}
+*/
+	obj=document.getElementById('wstexte3');
+	obj.innerHTML= '&nbsp;&nbsp;&nbsp;';//effacement de la zone erreur.
+	identifiant_rec = evt.data.substr(1,4);
+	//Vérification de l'identifiant de la carte.
+	if (ident_board == identifiant_rec){
+	    type_rec = evt.data.substr(6,2);
+	    // Test du type d'informations reçues.	    
+	    // Test des entrées analogiques reçues pour affichage dans le tableau des informations analogiques.
+	    if (type_rec == 'IA'){
+		rang_rec = evt.data.substr(9,2);
+		value_rec = evt.data.substr(12,4);
+	    	switch (rang_rec) {
+		    case case_ana_B1:
+		    obj=document.getElementById('nom_ana_B1');		    
+		    obj.innerHTML= nom_ana_B1;
+		    //calcul température instantanée.
+		    mesure=value_rec*1;
+		    if (mesure==0) mesure=1;//pour avoir une valeur significative.
+		    Ratio=(mesure/1024);
+		    R_ctn=Ratio*(R_charge_CTN/(1-Ratio));
+		    //calcul température en applicant la loi de conversion exponentielle.
+		    rdt=(Math.log(R_ctn/R_25))+(coef_b/(273.15 + 25));
+		    temperature=((coef_b/rdt)-273.15);
+		    obj=document.getElementById('wsana_B1');
+		    obj.innerHTML= temperature.toFixed(2);//valeur convertie + chaine avec 2 chiffres décimaux.
+		    obj=document.getElementById('unit_ana_B1');		    
+		    obj.innerHTML= unite_ana_B1;
+		    //Temerature instantanée pour l'affichage de la courbe de tendance.
+		    temperature_trend = parseFloat(temperature);
+		    break;
+		    default: 
+		    //Liste d'instructions à faire RAS.
+		    break;
+		}
+	    }
+	    //Test message de date/heure UTC et Date/heure légale
+	    //ATTENTION javascript convertit automatiquement une date/heure UTC en heure locale du poste de travail.   
+	    if (type_rec == 'DT'){
+		info_rec = evt.data.substr(9,10);
+		info_rec=info_rec*1000;//en millisecondes
+		//conversion de format.
+		datews = new Date(info_rec);
+		DateYear = datews.getFullYear();
+		DateMonth = (datews.getMonth())+1;
+		DateDay = datews.getDate();
+		DateHour = datews.getHours();
+		DateMinute = datews.getMinutes();
+		DateSecond = datews.getSeconds();
+		//Ajout de caractères 0;
+		if(DateMonth<10) DateMonth = '0' + DateMonth.toString();
+		else DateMonth=DateMonth.toString();		
+		if(DateDay<10) DateDay = '0' +DateDay.toString();
+		else DateDay=DateDay.toString();				
+		if(DateHour<10) DateHour = '0' +DateHour.toString();
+		else DateHour=DateHour.toString();				
+		if(DateMinute<10) DateMinute = '0' +DateMinute.toString();
+		else DateMinute=DateMinute.toString();				
+		if(DateSecond<10) DateSecond = '0' + DateSecond.toString();
+		else DateSecond=DateSecond.toString();
+		//Affichage de la date/heure au format yyyy-MM-DD hh:mm:ss
+		//ATTENTION javascript converti automatiquement une date/heure UTC en heure locale du poste de travail.
+		date_format= DateYear + '-'+ DateMonth +'-'+DateDay+ ' '+ DateHour +':'+ DateMinute +':'+ DateSecond;
+		obj=document.getElementById('wstexte2');
+		obj.innerHTML= date_format;
+	    }
+	}
+	//		
+    }
+    //
+    //Traitement erreur.
+    function onError(evt){
+	obj=document.getElementById('wstexte3');
+	obj.innerHTML= evt.data;   
+    }
+    //
+    //Traitement envoi de commandes.
+    function doSend(message){
+	//RAS
+    }
+    window.addEventListener('load', init, false);
+    //
+    //tendance
+    $(function () {
+	// we use an inline data source in the example, usually data would
+	// be fetched from a server
+	var data = [], totalPoints = 300;
+	function DataWebSocket() {
+	    if (data.length > 0) data = data.slice(1);
+	    //alert(data.join(","));
+	    // do a random walk
+	    while (data.length < totalPoints) {
+		var prev = data.length > 0 ? data[data.length - 1] :0;
+		var y = temperature_trend;
+		data.push(y);
+	    }
+	    // zip the generated y values with the x values
+	    var res = [];
+	    for (var i = 0; i < data.length; ++i)
+	    res.push([i, data[i]])
+	    return res;
+	}
+	// setup control widget
+	var updateInterval = 500;
+	$("#updateInterval").val(updateInterval).change(function () {
+	    var v = $(this).val();
+	    if (v && !isNaN(+v)) {
+		updateInterval = +v;
+		if (updateInterval < 10)
+		updateInterval = 10;
+		if (updateInterval > 10000)
+		updateInterval = 10000;
+		$(this).val("" + updateInterval);
+	    }
+	});
+	// setup plot
+	var options = {
+	    series: { shadowSize: 0,color: "red"}, //
+	    yaxis: { min: -10, max: 50, tickSize:5 },
+	    xaxis: { show: false }
+	};
+	var plot = $.plot($("#placeholder"), [ DataWebSocket() ], options);
+	function update() {
+	    window.addEventListener('load', init, false);
+	    plot.setData([ DataWebSocket() ]);
+	    // since the axes don't change, we don't need to call plot.setupGrid()
+	    plot.draw();
+	    obj=document.getElementById('nom_ana_B1');		    
+	    obj.innerHTML= nom_ana_B1;
+	    setTimeout(update, updateInterval);
+	}
+	update();
+    });
+//
+</script>
+</head>
+<body>
+<h3 align="center"><a href="http://www.stantor.com"><font color="red">S T A N T O R</font></a> &amp; <a href="http://www.jlectronique.org"><font color="blue">JLECTRONIQUE</font></a></h3>
+<h4 align="center">Gestion Serveur Temps réel sur Carte Uno/Duemilanove avec WebSocket V06.</h4>
+<h4 align="center">Courbe de tendance- Trendline</h4>
+<div id="output">
+<!-- Tableau d'affichage du status de la connexion au serveur de WebSocket -->
+<table border-style="ridge" align="center" border="2" bordercolor="green">
+<tbody><tr>
+<td><strong>Status Connexion</strong></td>
+<td><div id="wstexte1"><br />
+</div></td>
+<td><div id="wstexte2"><br />
+</div></td>
+<td><div id="wstexte3"><br />
+</div></td>
+</tr>
+</tbody></table>
+<br />
+<!-- Tableau de commande de la connexion au serveur de WebSocket -->
+<table border-style="ridge" align="center" border="2" bordercolor="green">
+<tbody><tr>
+<td><input value="Re-init connexion" onclick="javascript:testWebSocket()" type="button" /></td>
+<td><input value="Deconnexion" onclick="javascript:onClose()" type="button" /></td>
+</tr>
+</tbody></table>
+<br />
+<!-- Tableau des informations analogiques -->
+<table border-style="ridge" align="center" border="2" bordercolor="#1e90ff">
+<tbody><tr>
+<td><div id="nom_ana_B1"><br />
+</div></td><td><b /><div id="wsana_B1"><b><br />
+</b></div></td><td><div id="unit_ana_B1"><br />
+</div></td>
+</tr>
+</tbody></table><br />
+<!-- tendance -->
+<center>
+<div id="placeholder" style="width:500px;height:250px;" ></div>
+</center>
+<p style="text-align: center;">Période entre 2 mises à jour du graphique <input id="updateInterval" type="text" value="" style="text-align: right; width:5em"> milliseconds (10 millis ... 10000 millis) </p>
+<br />
+<div style="text-align:center;"><a align="center" href="manuel_utilisation_v06.html">Manuel Utilisation</a>&nbsp;&nbsp;&nbsp; <a align="center" href="manuel_configuration_v06.html">Manuel Configuration</a>&nbsp;&nbsp;&nbsp; 
+<a align="center" href="websocket_arduino_uno_v06.html">Programme de gestion de carte Arduino</a><br />
+</div>
+
+<br />
+</div></body>
+</html>
+

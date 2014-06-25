@@ -1,0 +1,756 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+
+
+<meta charset="utf-8" /><title>Stantor WebSocket client</title>
+<script language="javascript" type="text/javascript">
+    //
+    //Version 0.6.1 du 2012-11-04
+    //
+    //--------------------------------------Section paramétrage-----------------------------------------------------
+    //var wsUri = "ws://echo.websocket.org/";
+     var wsUri = "ws://192.168.1.75:80/";   
+    //Le port est par défaut 80 sinon changer dans la librairie le fichier WebSocket.h à la ligne 53: WebSocket(const char *urlPrefix = "/", int inPort = 80); 
+    //
+    //Identifiant de la carte Arduino.
+    var ident_board = 'UN01';//Cet identifiant doit être identique à celui mentionné dans le programme embarqué (fichier .ino).
+    //
+    //NOTA : Les cases des tableaux sont identifiées:
+    //		en colonnes par les lettres A, B, C, etc...
+    //		en lignes par les chiffres 1, 2, 3...(idem Tableur Excel, Libre office, Open Office)
+    //
+    //Libellés des noms des informations digitales affichées dans le tableau  (entrées et sorties).  
+    var nomdigi_A1= 'PIN_00';
+    var nomdigi_B1= 'PIN_02';
+    var nomdigi_C1= 'PIN_06';
+    var nomdigi_A2= 'PIN_08';
+    var nomdigi_B2= 'PIN_14';
+    var nomdigi_C2= 'PIN_01';
+    var nomdigi_A3= 'PIN_04';
+    var nomdigi_B3= 'PIN_07';
+    var nomdigi_C3= 'PIN_19';
+    //
+    //Chaine d'information reçue pour chaque case du tableau des informations digitales.
+    //Informations à mettre en correspondance avec le paramétrage des entrées/sorties de la carte Arduino.
+    // ID ou OD= entrée ou sortie digitales, Numéro de la pin, sens= 0 ou 1. 
+    var chaine_rec_A1_on= 'ID;00;1';
+    var chaine_rec_A1_off='ID;00;0';
+    var chaine_rec_B1_on= 'ID;02;1';
+    var chaine_rec_B1_off='ID;02;0';
+    var chaine_rec_C1_on= 'ID;06;1';
+    var chaine_rec_C1_off='ID;06;0';   
+    var chaine_rec_A2_on= 'ID;08;1';
+    var chaine_rec_A2_off='ID;08;0';
+    var chaine_rec_B2_on= 'ID;14;1';
+    var chaine_rec_B2_off='ID;14;0';
+    var chaine_rec_C2_on= 'OD;01;1';
+    var chaine_rec_C2_off='OD;01;0';
+    var chaine_rec_A3_on= 'OD;04;1';
+    var chaine_rec_A3_off='OD;04;0';
+    var chaine_rec_B3_on= 'OD;07;1';
+    var chaine_rec_B3_off='OD;07;0';
+    var chaine_rec_C3_on= 'OD;19;1';
+    var chaine_rec_C3_off='OD;19;0';
+    //
+    //Texte affiché dans le tableau des boutons de commande de sorties digitales.  
+    var bouton_A1_on = 	'Commande_01_ON ';    
+    var bouton_A1_off = 'Commande_01_OFF';
+    var bouton_B1_on = 	'Commande_04_ON ';    
+    var bouton_B1_off = 'Commande_04_OFF';
+    var bouton_C1_on = 	'Commande_07_ON ';    
+    var bouton_C1_off = 'Commande_07_OFF';
+    var bouton_A2_on = 	'Commande_09_ON ';    
+    var bouton_A2_off = 'Commande_09_OFF';
+    var bouton_B2_on = 	'Commande_15_ON ';    
+    var bouton_B2_off = 'Commande_15_OFF';
+    var bouton_C2_on = 	'Commande_19_ON ';    
+    var bouton_C2_off = 'Commande_19_OFF';
+    //
+    //Chaine d'information transmise pour chaque case du tableau des boutons de commandes digitales.
+    //Informations à mettre en correspondance avec le paramétrage des entrées/sorties de la carte Arduino.
+    //Avec OD = sortie digitales, Numéro de la pin, sens= 0 ou 1. 
+    var chaine_trans_A1_on= 'OD;01;1';
+    var chaine_trans_A1_off='OD;01;0';
+    var chaine_trans_B1_on= 'OD;04;1';
+    var chaine_trans_B1_off='OD;04;0';
+    var chaine_trans_C1_on= 'OD;07;1';
+    var chaine_trans_C1_off='OD;07;0';   
+    var chaine_trans_A2_on= 'OD;09;1';
+    var chaine_trans_A2_off='OD;09;0';
+    var chaine_trans_B2_on= 'OD;15;1';
+    var chaine_trans_B2_off='OD;15;0';
+    var chaine_trans_C2_on= 'OD;19;1';
+    var chaine_trans_C2_off='OD;19;0';
+    //
+    //Libellés des noms des informations affichées dans les cases du tableau des entrées analogiques.  
+    var nom_ana_A1= 'PIN_ANA_02';
+    var nom_ana_B1= 'PIN_ANA_03';
+    var nom_ana_C1= 'PIN_ANA_04';
+    //
+    //Numéros de broches ou pins des entrées analogiques de chaque case du tableau des entrées analogiques.
+    var case_ana_A1 = '02';
+    var case_ana_B1 = '03';
+    var case_ana_C1 = '04';
+    //
+    //Libellés des unités des informations affichées dans les cases du tableau des entrées analogiques.  
+    var unite_ana_A1= '&#176;C';
+    var unite_ana_B1= 'Kw/h';
+    var unite_ana_C1= 'Kg';
+    //
+    //Libellés des noms des informations affichées dans les cases du tableau des sorties PWM .  
+    var nom_PWM_A1= 'PIN_PWM_05';
+     //Numéro de broche ou pin des sorties PWM de chaque case du tableau concerné.
+    var case_PWM_A1 = '05';
+    //
+    //Libellés des noms des informations affichées dans les cases du tableau des compteurs d'impulsions.  
+    var nom_counter_A1= 'PIN_COUNTER_03';
+    //
+    //Numéro de broche ou pin des compteurs d'impulsions de chaque case du tableau des compteurs d'impulsions.
+    var case_counter_A1 = '03';
+    //
+    //Libellés des unités des informations affichées dans les cases du tableau des compteurs d'impulsions.  
+    var unite_counter_A1= 'Litre';
+    //
+    //Paramètre de la thermistance CTN
+    //La résistance de charge se trouve entre le 5V et la broche sélectionnée. La CTN étant entre la broche sélectionnée et le 0V (Masse).
+    var PIN_CTN = '02';//Broche (pin) analogique affectée à la CTN.
+    var R_charge_CTN='11500';//valeur de la résistance de charge du pont diviseur. 
+    var R_25= '9800';//valeur en ohms de la résistance CTN à 25 degré Celsius.;
+    var coef_b='3435';//coefficient spécifique à la CTN en degré Kelvin.
+    //
+    //-------------------Fin du paramétrage----------------------------------
+    //
+    //
+    //----------Variables du programme Stantor (ne pas modifier)-------------------
+    var output;
+    var identifiant_rec='XXXX'; //identifiant dans la trame reçue du serveur.
+    var type_rec='XX';		//type d'information reçue du serveur.
+    var rang_rec='00';		//numéro de broche dans la trame reçue du serveur.
+    var value_rec='0000';	//valeur dans la trame reçue du serveur.
+    var valeur_PWM='000';	//Valeur PWM transmise au serveur.
+    var valeur_counter='000';	//Valeur compteur transmise au serveur.
+    //
+    //Date du serveur.
+    var DateYear;
+    var DateMonth;
+    var DateDay;
+    var DateHour;
+    var DateMinute;
+    var DateSecond;
+    //------------------------------------------------------------------------
+    //Fonctions de gestion des WebSockets.
+     function init()
+    {
+	output = document.getElementById('output');
+	testWebSocket();
+    }
+    function testWebSocket()
+    {    
+	websocket = new WebSocket(wsUri);
+	websocket.onopen = function(evt) { onOpen() };
+	websocket.onclose = function(evt) { onClose() };
+	websocket.onmessage = function(evt) { onMessage(evt) };
+	websocket.onerror = function(evt) { onError(evt) };
+    }
+    function onOpen()
+    {
+	obj=document.getElementById('wstexte1');
+	obj.innerHTML='CONNECTE' ;
+    }
+    //
+    //Procédure de fermeture de la WebSocket.
+    function onClose()
+    {
+	obj=document.getElementById('wstexte1');
+	obj.innerHTML='DECONNECTE' ;
+	websocket.close();
+	websocket=null;
+    }
+    //Fonction de traitement des informations digitales (entrées ou sorties) reçues de la carte Arduino.
+    function onMessage(evt) {  
+	//
+	//Test pour Affichage du Ping/Pong.
+	//writeToScreen(evt.data);
+	if ((evt.data=='ping') || (evt.data=='pong')){ 
+	    obj=document.getElementById('wstexte2');
+	    obj.innerHTML= evt.data;
+	    return;
+	}
+
+	obj=document.getElementById('wstexte3');
+	obj.innerHTML= '&nbsp;&nbsp;&nbsp;';//effacement de la zone erreur.
+	//   
+	identifiant_rec = evt.data.substr(1,4);
+	//Vérification de l'identifiant de la carte.
+	if (ident_board == identifiant_rec){
+	    type_rec = evt.data.substr(6,2);
+	    // Test du type d'informations reçues.	    
+	    if ((type_rec == 'ID') ||(type_rec == 'OD')) {
+		info_rec = evt.data.substr(6,7);
+		// Test des entrées/sorties digitales reçues pour affichage dans le tableau des informations digitales.
+		switch (info_rec) {
+		    case chaine_rec_A1_on:
+		    obj=document.getElementById('nomdigi_A1');
+		    obj.innerHTML= nomdigi_A1;
+		    obj=document.getElementById('wsdigi_A1');
+		    obj.style.backgroundColor='green';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '1';
+		    break;
+		    case chaine_rec_A1_off:
+		    obj=document.getElementById('nomdigi_A1');
+		    obj.innerHTML= nomdigi_A1;	
+		    obj=document.getElementById('wsdigi_A1');
+		    obj.style.backgroundColor='red';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '0';
+		    break;
+		    case chaine_rec_B1_on:
+		    obj=document.getElementById('nomdigi_B1');
+		    obj.innerHTML= nomdigi_B1;
+		    obj=document.getElementById('wsdigi_B1');
+		    obj.style.backgroundColor='green';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '1';
+		    break;
+		    case chaine_rec_B1_off:
+		    obj=document.getElementById('nomdigi_B1');
+		    obj.innerHTML= nomdigi_B1;	
+		    obj=document.getElementById('wsdigi_B1');
+		    obj.style.backgroundColor='red';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '0';
+		    break;
+		    case chaine_rec_C1_on:
+		    obj=document.getElementById('nomdigi_C1');
+		    obj.innerHTML= nomdigi_C1;
+		    obj=document.getElementById('wsdigi_C1');
+		    obj.style.backgroundColor='green';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '1';
+		    break;
+		    case chaine_rec_C1_off:
+		    obj=document.getElementById('nomdigi_C1');
+		    obj.innerHTML= nomdigi_C1;	
+		    obj=document.getElementById('wsdigi_C1');
+		    obj.style.backgroundColor='red';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '0';
+		    break;
+		    case chaine_rec_A2_on:
+		    obj=document.getElementById('nomdigi_A2');
+		    obj.innerHTML= nomdigi_A2;	
+		    obj=document.getElementById('wsdigi_A2');
+		    obj.style.backgroundColor='green';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '1';		
+		    break;
+		    case chaine_rec_A2_off:
+		    obj=document.getElementById('nomdigi_A2');
+		    obj.innerHTML= nomdigi_A2;	
+		    obj=document.getElementById('wsdigi_A2');
+		    obj.style.backgroundColor='red';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '0';	
+		    break;	
+		    case chaine_rec_B2_on:
+		    obj=document.getElementById('nomdigi_B2');
+		    obj.innerHTML= nomdigi_B2;
+		    obj=document.getElementById('wsdigi_B2');
+		    obj.style.backgroundColor='green';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '1';
+		    break;
+		    case chaine_rec_B2_off:
+		    obj=document.getElementById('nomdigi_B2');
+		    obj.innerHTML= nomdigi_B2;	
+		    obj=document.getElementById('wsdigi_B2');
+		    obj.style.backgroundColor='red';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '0';
+		    break;
+		    case chaine_rec_C2_on:
+		    obj=document.getElementById('nomdigi_C2');
+		    obj.innerHTML= nomdigi_C2;
+		    obj=document.getElementById('wsdigi_C2');
+		    obj.style.backgroundColor='green';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '1';
+		    break;
+		    case chaine_rec_C2_off:
+		    obj=document.getElementById('nomdigi_C2');
+		    obj.innerHTML= nomdigi_C2;	
+		    obj=document.getElementById('wsdigi_C2');
+		    obj.style.backgroundColor='red';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '0';
+		    break;
+		    case chaine_rec_A3_on:
+		    obj=document.getElementById('nomdigi_A3');
+		    obj.innerHTML= nomdigi_A3;
+		    obj=document.getElementById('wsdigi_A3');
+		    obj.style.backgroundColor='green';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '1';
+		    break;
+		    case chaine_rec_A3_off:
+		    obj=document.getElementById('nomdigi_A3');
+		    obj.innerHTML= nomdigi_A3;	
+		    obj=document.getElementById('wsdigi_A3');
+		    obj.style.backgroundColor='red';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '0';
+		    break;
+		    case chaine_rec_B3_on:
+		    obj=document.getElementById('nomdigi_B3');
+		    obj.innerHTML= nomdigi_B3;
+		    obj=document.getElementById('wsdigi_B3');
+		    obj.style.backgroundColor='green';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '1';
+		    break;
+		    case chaine_rec_B3_off:
+		    obj=document.getElementById('nomdigi_B3');
+		    obj.innerHTML= nomdigi_B3;	
+		    obj=document.getElementById('wsdigi_B3');
+		    obj.style.backgroundColor='red';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '0';
+		    break;
+		    case chaine_rec_C3_on:
+		    obj=document.getElementById('nomdigi_C3');
+		    obj.innerHTML= nomdigi_C3;
+		    obj=document.getElementById('wsdigi_C3');
+		    obj.style.backgroundColor='green';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '1';
+		    break;
+		    case chaine_rec_C3_off:
+		    obj=document.getElementById('nomdigi_C3');
+		    obj.innerHTML= nomdigi_C3;	
+		    obj=document.getElementById('wsdigi_C3');
+		    obj.style.backgroundColor='red';
+		    obj.style.color='white';
+		    obj.style.fontSize='18px';
+		    obj.innerHTML= '0';
+		    break;
+		    default: 
+		    //Liste d'instructions à faire RAS.
+		    break;
+		}
+	    }
+	    // Test des entrées analogiques reçues pour affichage dans le tableau des informations analogiques.
+	    else if (type_rec == 'IA'){
+		//writeToScreen(evt.data);
+		rang_rec = evt.data.substr(9,2);
+		value_rec = evt.data.substr(12,4);
+	    	switch (rang_rec) {
+		    case case_ana_A1:
+		    obj=document.getElementById('nom_ana_A1');		    
+		    obj.innerHTML= nom_ana_A1;
+		    //
+		    //calcul température instantanée.
+		    mesure=value_rec*1;
+		    if (mesure==0) mesure=1;//pour avoir une valeur significative.
+		    Ratio=(mesure/1024);
+		    R_ctn=Ratio*(R_charge_CTN/(1-Ratio));
+		    //calcul température en applicant la loi de conversion exponentielle.
+		    rdt=(Math.log(R_ctn/R_25))+(coef_b/(273.15 + 25));
+		    temperature=((coef_b/rdt)-273.15);
+		    obj=document.getElementById('wsana_A1');
+		    obj.innerHTML= temperature.toFixed(2);//valeur convertie + chaine avec 2 chiffres décimaux.
+		    obj=document.getElementById('unit_ana_A1');		    
+		    obj.innerHTML= unite_ana_A1;
+		    break;
+		    case case_ana_B1:
+		    obj=document.getElementById('nom_ana_B1');		    
+		    obj.innerHTML= nom_ana_B1;
+		    obj=document.getElementById('wsana_B1');		    
+		    obj.innerHTML= value_rec*1;//pour supprimer les zéros en début de chaine.
+		    obj=document.getElementById('unit_ana_B1');		    
+		    obj.innerHTML= unite_ana_B1;
+		    break;
+		    case case_ana_C1:
+		    obj=document.getElementById('nom_ana_C1');		    
+		    obj.innerHTML= nom_ana_C1;
+		    obj=document.getElementById('wsana_C1');		    
+		    obj.innerHTML= value_rec*1;//pour supprimer les zéros en début de chaine.
+		    obj=document.getElementById('unit_ana_C1');		    
+		    obj.innerHTML= unite_ana_C1;		    
+		    break;
+		    default: 
+		    //Liste d'instructions à faire RAS.
+		    break;
+		}
+	    }
+	    // Test des compteurs d'impulsions reçue pour affichage dans le tableau des informations compteurs.
+	    else if (type_rec == 'CP'){
+		//writeToScreen(evt.data);
+		rang_rec = evt.data.substr(9,2);
+		value_rec = evt.data.substr(12,10);
+	    	switch (rang_rec) {
+		    case case_counter_A1:
+		    obj=document.getElementById('nom_counter_A1');		    
+		    obj.innerHTML= nom_counter_A1;
+		    obj=document.getElementById('wscounter_A1');		    
+		    obj.innerHTML= value_rec*1;//pour supprimer les zéros en début de chaine.
+		    obj=document.getElementById('unit_counter_A1');		    
+		    obj.innerHTML= unite_counter_A1;
+		    break;
+		    default: 
+		    //Liste d'instructions à faire RAS.
+		    break;
+		}
+	    }
+	    //  Test des sorties PWM reçues pour affichage dans le tableau des informations PWM.
+	    else if (type_rec == 'OP'){
+		rang_rec = evt.data.substr(9,2);
+		value_rec = evt.data.substr(12,3);
+		//writeToScreen(evt.data);
+	    	switch (rang_rec) {
+		    case case_PWM_A1:
+		    obj=document.getElementById('nom_PWM_A1');		    
+		    obj.innerHTML= nom_PWM_A1;		    
+		    document.getElementById('wsPWM_A1').value=value_rec*1;//pour supprimer les zéros en début de chaine.
+		    break;
+		    default: 
+		    //Liste d'instructions à faire RAS.
+		    break;
+		}
+	    }  
+	    // Test des sorties digitales reçues pour affichage dans le tableau des boutons.	    
+	    if (type_rec == 'OD'){
+		info_rec = evt.data.substr(6,7);
+		switch (info_rec) {
+		    //Test des sorties digitales reçues pour affichage dans le tableau des boutons.
+		    case chaine_trans_A1_on:
+		    document.getElementById('id_bouton_A1').value = bouton_A1_on;
+		    break;
+		    case chaine_trans_A1_off:
+		    document.getElementById('id_bouton_A1').value = bouton_A1_off;
+		    break;
+		    case chaine_trans_B1_on:
+		    document.getElementById('id_bouton_B1').value = bouton_B1_on;
+		    break;
+		    case chaine_trans_B1_off:
+		    document.getElementById('id_bouton_B1').value = bouton_B1_off;
+		    break;
+		    case chaine_trans_C1_on:
+		    document.getElementById('id_bouton_C1').value = bouton_C1_on;
+		    break;
+		    case chaine_trans_C1_off:
+		    document.getElementById('id_bouton_C1').value = bouton_C1_off;
+		    break;
+		    case chaine_trans_A2_on:
+		    document.getElementById('id_bouton_A2').value = bouton_A2_on;
+		    break;
+		    case chaine_trans_A2_off:
+		    document.getElementById('id_bouton_A2').value = bouton_A2_off;
+		    break;
+		    case chaine_trans_B2_on:
+		    document.getElementById('id_bouton_B2').value = bouton_B2_on;
+		    break;
+		    case chaine_trans_B2_off:
+		    document.getElementById('id_bouton_B2').value = bouton_B2_off;
+		    break;
+		    case chaine_trans_C2_on:
+		    document.getElementById('id_bouton_C2').value = bouton_C2_on;
+		    break;
+		    case chaine_trans_C2_off:
+		    document.getElementById('id_bouton_C2').value = bouton_C2_off;
+		    break;
+		    default: 
+		    //Liste d'instructions à faire RAS.
+		    break;
+		}
+	    }
+	    //Test message de date/heure UTC et Date/heure légale
+	    //ATTENTION javascript convertit automatiquement une date/heure UTC en heure locale du poste de travail.   
+	    if (type_rec == 'DT'){
+		info_rec = evt.data.substr(9,10);
+		info_rec=info_rec*1000;//en millisecondes
+		//conversion de format.
+		datews = new Date(info_rec);
+		DateYear = datews.getFullYear();
+		DateMonth = (datews.getMonth())+1;
+		DateDay = datews.getDate();
+		DateHour = datews.getHours();
+		DateMinute = datews.getMinutes();
+		DateSecond = datews.getSeconds();
+		//Ajout de caractères 0;
+		if(DateMonth<10) DateMonth = '0' + DateMonth.toString();
+		else DateMonth=DateMonth.toString();		
+		if(DateDay<10) DateDay = '0' +DateDay.toString();
+		else DateDay=DateDay.toString();				
+		if(DateHour<10) DateHour = '0' +DateHour.toString();
+		else DateHour=DateHour.toString();				
+		if(DateMinute<10) DateMinute = '0' +DateMinute.toString();
+		else DateMinute=DateMinute.toString();				
+		if(DateSecond<10) DateSecond = '0' + DateSecond.toString();
+		else DateSecond=DateSecond.toString();
+		//Affichage de la date/heure au format yyyy-MM-DD hh:mm:ss
+		date_format= DateYear + '-'+ DateMonth +'-'+DateDay+ ' '+ DateHour +':'+ DateMinute +':'+ DateSecond;
+		obj=document.getElementById('wstexte2');
+		obj.innerHTML= date_format;
+	    }
+	    //
+	}
+    }
+    //
+    //Traitement erreur.
+    function onError(evt){
+	//writeToScreen(evt.data);
+	obj=document.getElementById('wstexte3');
+	obj.innerHTML= evt.data;   
+    }
+    //
+    //Traitement envoi de commandes - sorties digitales.
+    function doSend(message){
+	if (message=='action_bouton_A1'){
+	    if (document.getElementById('id_bouton_A1').value == bouton_A1_off){
+		document.getElementById('id_bouton_A1').value = bouton_A1_on;
+		websocket.send('('+ ident_board+';'+ chaine_trans_A1_on +')');
+	    }
+	    else{
+		document.getElementById('id_bouton_A1').value = bouton_A1_off;
+		websocket.send('('+ ident_board+';'+ chaine_trans_A1_off +')');	
+	    }      
+	}
+	else if (message=='action_bouton_B1'){
+	    if (document.getElementById('id_bouton_B1').value == bouton_B1_off){
+		document.getElementById('id_bouton_B1').value = bouton_B1_on;
+		websocket.send('('+ ident_board+';'+ chaine_trans_B1_on +')');
+	    }
+	    else{
+		document.getElementById('id_bouton_B1').value = bouton_B1_off;
+		websocket.send('('+ ident_board+';'+ chaine_trans_B1_off +')');	
+	    }      
+	}
+	else if (message=='action_bouton_C1'){
+	    if (document.getElementById('id_bouton_C1').value == bouton_C1_off){
+		document.getElementById('id_bouton_C1').value = bouton_C1_on;
+		websocket.send('('+ ident_board+';'+ chaine_trans_C1_on +')');
+	    }
+	    else{
+		document.getElementById('id_bouton_C1').value = bouton_C1_off;
+		websocket.send('('+ ident_board+';'+ chaine_trans_C1_off +')');	
+	    }      
+	}
+	else if (message=='action_bouton_A2'){
+	    if (document.getElementById('id_bouton_A2').value == bouton_A2_off){
+		document.getElementById('id_bouton_A2').value = bouton_A2_on;
+		websocket.send('('+ ident_board+';'+ chaine_trans_A2_on +')');
+	    }
+	    else{
+		document.getElementById('id_bouton_A2').value = bouton_A2_off;
+		websocket.send('('+ ident_board+';'+ chaine_trans_A2_off +')');	
+	    }      
+	}
+	else if (message=='action_bouton_B2'){
+	    if (document.getElementById('id_bouton_B2').value == bouton_B2_off){
+		document.getElementById('id_bouton_B2').value = bouton_B2_on;
+		websocket.send('('+ ident_board+';'+ chaine_trans_B2_on +')');
+	    }
+	    else{
+		document.getElementById('id_bouton_B2').value = bouton_B2_off;
+		websocket.send('('+ ident_board+';'+ chaine_trans_B2_off +')');	
+	    }      
+	}
+	else if (message=='action_bouton_C2'){
+	    if (document.getElementById('id_bouton_C2').value == bouton_C2_off){
+		document.getElementById('id_bouton_C2').value = bouton_C2_on;
+		websocket.send('('+ ident_board+';'+ chaine_trans_C2_on +')');
+	    }
+	    else{
+		document.getElementById('id_bouton_C2').value = bouton_C2_off;
+		websocket.send('('+ ident_board+';'+ chaine_trans_C2_off +')');	
+	    }      
+	}
+	//commande PWM
+	else if (message=='action_bouton_PWM_A1'){
+	    valeur_PWM=document.getElementById('wsPWM_A1').value;
+	    websocket.send('('+ ident_board+';'+ 'OP'+';'+case_PWM_A1+';'+valeur_PWM +')');//chaine d'envoi de commande PWM.	
+	}
+	//Annuler la saisie.
+	else if (message=='annuler_bouton_PWM_A1'){
+	    location.reload(); 
+	}
+	//commande bouton compteur.
+	else if (message=='action_bouton_counter_A1'){
+	    valeur_counter=document.getElementById('ws_init_counter_A1').value;
+	    websocket.send('('+ ident_board+';'+ 'CP'+';'+case_counter_A1+';'+valeur_counter +')');//chaine d'envoi de commande initialisation compteur.
+	    document.getElementById('ws_init_counter_A1').value=' ';
+	}
+	//Annuler la saisie.
+	else if (message=='annuler_bouton_counter_A1'){
+	    location.reload(); 
+	}
+    }
+   //
+   // Utilitaire d'affichage sur écran
+    function writeToScreen(message){
+	var pre = document.createElement('p');
+	pre.style.wordWrap = 'break-word';
+	pre.innerHTML = message;
+	output.appendChild(pre);
+    }
+    //
+    window.addEventListener('load', init, false);
+  //
+  //--------------------------------------------------------------------------------
+  //
+</script></head><body>
+<h3 align="center"><a href="http://www.stantor.com"><font color="red">S T A N T O R</font></a> &amp; <a href="http://www.jlectronique.org"><font color="blue">JLECTRONIQUE</font></a></h3>
+<h4 align="center">Gestion Serveur Temps réel sur Carte Uno/Duemilanove avec WebSocket V06.</h4>
+<div id="output">
+
+<!-- Tableau d'affichage du status de la connexion au serveur de WebSocket -->
+<table border-style="ridge" align="center" border="2" bordercolor="green">
+<tbody><tr>
+<td><strong>Status Connexion</strong></td>
+<td><div id="wstexte1"><br />
+</div></td>
+<td><div id="wstexte2"><br />
+</div></td>
+<td><div id="wstexte3"><br />
+</div></td>
+</tr>
+</tbody></table>
+<br />
+<!-- Tableau de commande de la connexion au serveur de WebSocket -->
+<table border-style="ridge" align="center" border="2" bordercolor="green">
+<tbody><tr>
+<td><input value="Re-init connexion" onclick="javascript:testWebSocket()" type="button" /></td>
+<td><input value="Deconnexion" onclick="javascript:onClose()" type="button" /></td>
+</tr>
+</tbody></table>
+<br />
+<!-- Tableau des informations digitales input et output -->
+<table border-style="ridge" align="center" border="2" bordercolor="#1e90ff">
+<tbody><tr>
+<td><div id="nomdigi_A1"><br />
+</div></td><td><div id="wsdigi_A1"><br />
+</div></td>
+<td style="background-color: grey;">&nbsp;</td>
+<td><div id="nomdigi_B1"><br />
+</div></td><td><div id="wsdigi_B1"><br />
+</div></td>
+<td style="background-color: grey;">&nbsp;</td>
+<td><div id="nomdigi_C1"><br />
+</div></td><td><div id="wsdigi_C1"><br />
+</div></td>
+</tr>
+<tr>
+<td><div id="nomdigi_A2"><br />
+</div></td><td><div id="wsdigi_A2"><br />
+</div></td>
+<td style="background-color: grey;">&nbsp;</td>
+<td><div id="nomdigi_B2"><br />
+</div></td><td><div id="wsdigi_B2"><br />
+</div></td>
+<td style="background-color: grey;">&nbsp;</td>
+<td><div id="nomdigi_C2"><br />
+</div></td><td><div id="wsdigi_C2"><br />
+</div></td>
+</tr>
+<tr>
+<td><div id="nomdigi_A3"><br />
+</div></td><td><div id="wsdigi_A3"><br />
+</div></td>
+<td style="background-color: grey;">&nbsp;</td>
+<td><div id="nomdigi_B3"><br />
+</div></td><td><div id="wsdigi_B3"><br />
+</div></td>
+<td style="background-color: grey;">&nbsp;</td>
+<td><div id="nomdigi_C3"><br />
+</div></td><td><div id="wsdigi_C3"><br />
+</div></td>
+</tr>
+</tbody></table>
+<br />
+<!-- Tableau des Boutons pour l'envoi de commandes digitales -->
+<table border-style="ridge" align="center" border="2" bordercolor="#1e90ff">
+<tbody><tr>
+<td><input style="background-color: blue; color: white;" value="?" id="id_bouton_A1" onclick="javascript:doSend('action_bouton_A1')" type="button" /></td>
+<td style="background-color: grey;">&nbsp;</td>
+<td><input style="background-color: blue; color: white;" value="?" id="id_bouton_B1" onclick="javascript:doSend('action_bouton_B1')" type="button" /></td>
+<td style="background-color: grey;">&nbsp;</td>
+<td><input style="background-color: blue; color: white;" value="?" id="id_bouton_C1" onclick="javascript:doSend('action_bouton_C1')" type="button" /></td>
+</tr>
+<tr>
+<td><input style="background-color: blue; color: white;" value="?" id="id_bouton_A2" onclick="javascript:doSend('action_bouton_A2')" type="button" /></td>
+<td style="background-color: grey;">&nbsp;</td>
+<td><input style="background-color: blue; color: white;" value="?" id="id_bouton_B2" onclick="javascript:doSend('action_bouton_B2')" type="button" /></td>
+<td style="background-color: grey;">&nbsp;</td>
+<td><input style="background-color: blue; color: white;" value="?" id="id_bouton_C2" onclick="javascript:doSend('action_bouton_C2')" type="button" /></td>
+</tr>
+</tbody></table>
+<br />
+<!-- Tableau des informations analogiques -->
+<table border-style="ridge" align="center" border="2" bordercolor="#1e90ff">
+<tbody><tr>
+<td><div id="nom_ana_A1"><br />
+</div></td><td><b /><div id="wsana_A1"><b><br />
+</b></div></td><td><div id="unit_ana_A1"><br />
+</div></td>
+<td style="background-color: grey;">&nbsp;</td>
+<td><div id="nom_ana_B1"><br />
+</div></td><td><b /><div id="wsana_B1"><b><br />
+</b></div></td><td><div id="unit_ana_B1"><br />
+</div></td>
+<td style="background-color: grey;">&nbsp;</td>
+<td><div id="nom_ana_C1"><br />
+</div></td><td><b /><div id="wsana_C1"><b><br />
+</b></div></td><td><div id="unit_ana_C1"><br />
+</div></td>
+</tr>
+</tbody></table>
+<br />
+<!-- Tableau des informations de commande PWM (consigne de réglage) -->
+<table border-style="ridge" align="center" border="2" bordercolor="#1e90ff">
+<tbody><tr>
+<td><div id="nom_PWM_A1"><br />
+</div></td>
+<td><input style="background-color: cyan; color: black; font-weight: bold;" size="3" maxlength="3" value="???" id="wsPWM_A1" type="text" /></td>
+<td><input style="background-color: red; color: white;" value="Valider" id="id_bouton_PWM_A1" onclick="javascript:doSend('action_bouton_PWM_A1')" type="button" /></td>
+<td><input style="background-color: yellow; color: black;" value="Annuler" id="id_bouton_annuler_PWM_A1" onclick="javascript:doSend('annuler_bouton_PWM_A1')" type="button" /></td>
+<td>Valeur=0..255</td>
+</tr>
+</tbody></table>
+<br />
+<!-- Tableau des informations compteurs d'impulsions -->
+<table border-style="ridge" align="center" border="2" bordercolor="#1e90ff">
+<tbody><tr>
+<td><div id="nom_counter_A1"><br /></div></td>
+<td><b /><div id="wscounter_A1"><b><br /></b></div></td>
+<td><div id="unit_counter_A1"><br /></div></td>
+<td style="background-color: grey;">&nbsp;</td>
+<td><input style="background-color: cyan; color: black; font-weight: bold;" size="10" maxlength="10" value=" " id="ws_init_counter_A1" type="text" /></td>
+<td><input style="background-color: red; color: white;" value="Valider" id="id_bouton_counter_A1" onclick="javascript:doSend('action_bouton_counter_A1')" type="button" /></td>
+<td><input style="background-color: yellow; color: black;" value="Annuler" id="id_bouton_annuler_counter_A1" onclick="javascript:doSend('annuler_bouton_counter_A1')" type="button" /></td>
+<td>9 chiffres</td>
+</tr>
+</tbody></table>
+<br />
+<div style="text-align: center;"><a align="center" href="manuel_utilisation_v06.html">Manuel Utilisation</a>&nbsp;&nbsp;&nbsp; <a align="center" href="manuel_configuration_v06.html">Manuel Configuration</a>&nbsp;&nbsp;&nbsp;<a align="center" href="graphe_tendance_v06.html">Courbe de tendance</a><br />
+</div>
+
+<br />
+</div></body></html>
